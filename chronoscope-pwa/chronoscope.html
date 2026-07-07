@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1c2431">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>The Chronoscope — Guess the Year</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2431;
+    --ink-2:#141a24;
+    --parchment:#efe6d2;
+    --parchment-2:#e3d5b3;
+    --line:#2b2320;
+    --brass:#b8892c;
+    --brass-light:#d9ae52;
+    --stamp:#a63d40;
+    --seal:#3f6c63;
+    --shadow: rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100dvh;
+    background:
+      radial-gradient(ellipse at 50% -10%, #2a3448 0%, var(--ink) 55%, var(--ink-2) 100%);
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overflow-x:hidden;
+  }
+  .stage{ width:100%; max-width:480px; }
+  h1,h2,h3{ font-family:'Fraunces',serif; margin:0; }
+  .eyebrow{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--brass-light);
+    opacity:.85;
+  }
+  /* ---------- masthead ---------- */
+  .masthead{ text-align:center; margin-bottom:22px; }
+  .masthead h1{
+    font-size: clamp(30px, 8vw, 42px);
+    font-weight:900;
+    letter-spacing:.02em;
+    color:var(--parchment);
+    margin:6px 0;
+    text-shadow: 0 2px 0 rgba(0,0,0,.3);
+  }
+  .rule{
+    height:1px;
+    background: linear-gradient(90deg, transparent, var(--brass) 20%, var(--brass) 80%, transparent);
+    margin:10px auto;
+    width:70%;
+  }
+  /* ---------- card ---------- */
+  .card{
+    background: var(--parchment);
+    color: var(--line);
+    border-radius:6px;
+    padding:22px 20px 24px;
+    box-shadow: 0 18px 40px var(--shadow), 0 2px 0 rgba(0,0,0,.15) inset;
+    position:relative;
+    border: 1px solid rgba(0,0,0,.15);
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:8px;
+    border: 1px solid rgba(43,35,32,.25);
+    border-radius:3px;
+    pointer-events:none;
+  }
+  .card-inner{ position:relative; }
+
+  /* ---------- start screen ---------- */
+  .start-copy{ font-size:15px; line-height:1.55; color:#3a3129; margin: 10px 0 20px; }
+  .start-copy b{ color:var(--line); }
+  .stat-row{
+    display:flex; gap:10px; margin-bottom:20px;
+  }
+  .stat-chip{
+    flex:1; text-align:center; background:var(--parchment-2);
+    border-radius:4px; padding:10px 6px; border:1px solid rgba(43,35,32,.15);
+  }
+  .stat-chip .n{ font-family:'Space Mono',monospace; font-weight:700; font-size:18px; color:var(--stamp); display:block;}
+  .stat-chip .l{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#5a4f42;}
+
+  button{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    border:none;
+    cursor:pointer;
+    -webkit-appearance:none;
+  }
+  .btn-primary{
+    width:100%;
+    background: linear-gradient(180deg, var(--brass-light), var(--brass));
+    color:#221704;
+    padding:15px 18px;
+    border-radius:5px;
+    font-size:16px;
+    letter-spacing:.02em;
+    box-shadow: 0 4px 0 #7d5c1a, 0 8px 16px rgba(0,0,0,.35);
+    transition: transform .08s ease;
+  }
+  .btn-primary:active{ transform: translateY(3px); box-shadow: 0 1px 0 #7d5c1a, 0 4px 8px rgba(0,0,0,.3); }
+  .btn-primary:disabled{ opacity:.45; box-shadow:none; cursor:not-allowed; }
+  .btn-ghost{
+    width:100%; background:transparent; color:#5a4f42;
+    padding:10px; font-size:13px; margin-top:10px; text-decoration:underline;
+  }
+
+  /* ---------- top bar during round ---------- */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; padding:0 2px;
+  }
+  .topbar .eyebrow{ color:var(--brass-light); }
+  .score-badge{
+    font-family:'Space Mono',monospace; font-size:13px; font-weight:700;
+    color:var(--parchment); background:rgba(184,137,44,.18);
+    border:1px solid var(--brass); padding:4px 9px; border-radius:20px;
+  }
+
+  /* ---------- illustration frame ---------- */
+  .frame{
+    background: var(--parchment);
+    border-radius:4px;
+    padding:10px;
+    position:relative;
+    border: 2px solid var(--line);
+    box-shadow: inset 0 0 0 5px var(--parchment), inset 0 0 0 6px var(--line);
+    aspect-ratio: 4 / 3;
+    overflow:hidden;
+  }
+  .frame svg{ display:block; width:100%; height:100%; }
+  .frame .real-photo{
+    display:block; width:100%; height:100%; object-fit:cover;
+    filter: sepia(.18) contrast(1.03);
+  }
+  .plate-caption{
+    text-align:center; font-family:'Space Mono',monospace;
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:#6b5f50; margin-top:8px;
+  }
+
+  .prompt{
+    font-size: clamp(18px,5vw,21px);
+    line-height:1.35;
+    margin: 18px 0 6px;
+    color: var(--line);
+    font-weight:600;
+  }
+
+  /* ---------- slider ---------- */
+  .year-readout{
+    text-align:center; margin: 18px 0 6px;
+  }
+  .year-readout .num{
+    font-family:'Space Mono',monospace;
+    font-size: 44px; font-weight:700; color:var(--stamp);
+    letter-spacing:.02em;
+  }
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    appearance:none;
+    height:6px;
+    border-radius:4px;
+    background: linear-gradient(90deg, var(--brass) 0%, var(--brass) var(--fill,50%), #cfc2a4 var(--fill,50%), #cfc2a4 100%);
+    margin: 14px 0 6px;
+    touch-action: pan-y;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:28px; height:28px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff2d6, var(--brass) 70%);
+    border:2px solid var(--line);
+    box-shadow:0 2px 6px rgba(0,0,0,.4);
+    cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:26px; height:26px; border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff2d6, var(--brass) 70%);
+    border:2px solid var(--line);
+    cursor:pointer;
+  }
+  .tick-row{
+    display:flex; justify-content:space-between;
+    font-family:'Space Mono',monospace; font-size:10px; color:#8a7c67;
+    padding: 0 2px;
+  }
+
+  /* ---------- reveal ---------- */
+  .stamp-wrap{ position:relative; }
+  .stamp{
+    position:absolute; top:10%; left:50%;
+    transform: translate(-50%,-10%) rotate(-8deg) scale(0.4);
+    opacity:0;
+    border: 5px solid var(--stamp);
+    color:var(--stamp);
+    font-family:'Space Mono',monospace;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:6px 14px;
+    border-radius:6px;
+    background: rgba(239,230,210,.85);
+    animation: stampIn .35s cubic-bezier(.2,1.4,.4,1) forwards .1s;
+    white-space:nowrap;
+    font-size:15px;
+    z-index:3;
+    pointer-events:none;
+  }
+  .stamp.good{ border-color:var(--seal); color:var(--seal); }
+  @keyframes stampIn{
+    0%{ opacity:0; transform: translate(-50%,-10%) rotate(-8deg) scale(.4); }
+    60%{ opacity:1; transform: translate(-50%,-10%) rotate(-8deg) scale(1.08); }
+    100%{ opacity:1; transform: translate(-50%,-10%) rotate(-8deg) scale(1); }
+  }
+  .result-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:16px; font-family:'Space Mono',monospace; font-size:13px;
+    border-top:1px dashed #b9a985; padding-top:12px;
+  }
+  .result-row b{ font-size:20px; color:var(--line); }
+  .blurb{ font-size:13.5px; line-height:1.5; color:#4a4033; margin-top:10px; }
+  .timeline{
+    position:relative; height:34px; margin-top:16px;
+    background: linear-gradient(90deg, transparent, #d9cba6, transparent);
+    border-radius:3px;
+  }
+  .timeline .mark{
+    position:absolute; top:0; bottom:0; width:2px; background:var(--line);
+  }
+  .timeline .dot{
+    position:absolute; top:50%; width:16px; height:16px; border-radius:50%;
+    transform: translate(-50%,-50%);
+    border:2px solid var(--line);
+  }
+  .timeline .dot.actual{ background:var(--seal); }
+  .timeline .dot.guess{ background:var(--stamp); }
+
+  /* ---------- results screen ---------- */
+  .rank{
+    text-align:center; margin: 4px 0 18px;
+  }
+  .rank .n{ font-size:38px; font-weight:900; color:var(--stamp); }
+  .review-list{ max-height:260px; overflow-y:auto; margin: 12px 0 18px; -webkit-overflow-scrolling:touch;}
+  .review-item{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12.5px; padding:8px 4px; border-bottom:1px solid rgba(43,35,32,.12);
+  }
+  .review-item .ry{ font-family:'Space Mono',monospace; color:#5a4f42; }
+  .review-item .pts{ font-family:'Space Mono',monospace; font-weight:700; color:var(--seal); }
+
+  .footnote{
+    text-align:center; margin-top:16px; font-size:11px; color:#7d7365; line-height:1.5;
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="app"></div>
+
+<script>
+/* ============ DATA ============ */
+const ROUNDS = [
+  {
+    year: 1440, title:"A New Kind of Press", photo:"commons:Gutenberg.press.jpg",
+    blurb:"In Mainz, a goldsmith perfects a press with movable metal type — soon books no longer have to be copied out by hand, one at a time.",
+    svg: `
+      <rect x="70" y="28" width="260" height="16" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="86" y="44" width="14" height="200" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <rect x="300" y="44" width="14" height="200" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <rect x="186" y="58" width="28" height="130" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <line x1="214" y1="80" x2="300" y2="52" stroke="var(--line)" stroke-width="4"/>
+      <circle cx="303" cy="50" r="8" fill="var(--brass)" stroke="var(--line)" stroke-width="2"/>
+      <rect x="140" y="188" width="120" height="14" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="150" y="206" width="100" height="58" fill="#fbf6e8" stroke="var(--line)" stroke-width="2.5"/>
+      <line x1="160" y1="220" x2="240" y2="220" stroke="var(--line)" stroke-width="2"/>
+      <line x1="160" y1="230" x2="240" y2="230" stroke="var(--line)" stroke-width="2"/>
+      <line x1="160" y1="240" x2="225" y2="240" stroke="var(--line)" stroke-width="2"/>
+      <line x1="160" y1="250" x2="235" y2="250" stroke="var(--line)" stroke-width="2"/>
+      <line x1="60" y1="264" x2="340" y2="264" stroke="var(--line)" stroke-width="3"/>
+    `
+  },
+  {
+    year: 1776, title:"Words on Parchment", photo:"commons:Declaration of Independence (1819), by John Trumbull.jpg",
+    blurb:"Delegates in Philadelphia sign a document declaring thirteen colonies free from British rule, its case set out in careful, deliberate prose.",
+    svg: `
+      <ellipse cx="130" cy="150" rx="16" ry="60" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <ellipse cx="290" cy="150" rx="16" ry="60" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="130" y="90" width="160" height="120" fill="#fbf6e8" stroke="var(--line)" stroke-width="2.5"/>
+      <line x1="150" y1="115" x2="270" y2="115" stroke="var(--line)" stroke-width="2"/>
+      <line x1="150" y1="130" x2="270" y2="130" stroke="var(--line)" stroke-width="2"/>
+      <line x1="150" y1="145" x2="255" y2="145" stroke="var(--line)" stroke-width="2"/>
+      <line x1="150" y1="160" x2="260" y2="160" stroke="var(--line)" stroke-width="2"/>
+      <path d="M170 185 q40 20 90 0" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="252" cy="192" r="17" fill="var(--stamp)" stroke="var(--line)" stroke-width="2"/>
+      <path d="M245 192 l5 6 l9 -12" fill="none" stroke="#efe6d2" stroke-width="2.5"/>
+      <line x1="75" y1="235" x2="140" y2="205" stroke="var(--line)" stroke-width="4"/>
+      <path d="M75 235 l-18 10 l4 -20 z" fill="var(--line)"/>
+      <circle cx="80" cy="255" r="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+    `
+  },
+  {
+    year: 1789, title:"The Fortress Falls", photo:"commons:Prise de la Bastille.jpg",
+    blurb:"Crowds in Paris storm a royal fortress-prison, an act that ignites years of revolution and reshapes the idea of who holds power.",
+    svg: `
+      <rect x="55" y="95" width="55" height="150" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="172" y="70" width="55" height="175" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="290" y="95" width="55" height="150" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="55" y="85" width="12" height="14" fill="var(--line)"/>
+      <rect x="80" y="85" width="12" height="14" fill="var(--line)"/>
+      <rect x="98" y="85" width="12" height="14" fill="var(--line)"/>
+      <rect x="172" y="60" width="12" height="14" fill="var(--line)"/>
+      <rect x="197" y="60" width="12" height="14" fill="var(--line)"/>
+      <rect x="215" y="60" width="12" height="14" fill="var(--line)"/>
+      <rect x="290" y="85" width="12" height="14" fill="var(--line)"/>
+      <rect x="315" y="85" width="12" height="14" fill="var(--line)"/>
+      <rect x="333" y="85" width="12" height="14" fill="var(--line)"/>
+      <line x1="199" y1="45" x2="199" y2="70" stroke="var(--line)" stroke-width="2"/>
+      <path d="M199 45 l24 8 l-24 8 z" fill="var(--stamp)"/>
+      <g fill="var(--line)">
+        <circle cx="90" cy="252" r="6"/><line x1="90" y1="258" x2="90" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="110" cy="255" r="6"/><line x1="110" y1="261" x2="110" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="130" cy="250" r="6"/><line x1="130" y1="256" x2="130" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="150" cy="254" r="6"/><line x1="150" y1="260" x2="150" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="250" cy="252" r="6"/><line x1="250" y1="258" x2="250" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="270" cy="250" r="6"/><line x1="270" y1="256" x2="270" y2="272" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="290" cy="255" r="6"/><line x1="290" y1="261" x2="290" y2="272" stroke="var(--line)" stroke-width="3"/>
+      </g>
+    `
+  },
+  {
+    year: 1876, title:"A Voice Down the Wire", photo:"1876-telephone.jpg",
+    blurb:"A young inventor files a patent for a device that carries the human voice along a copper wire — the telephone is born.",
+    svg: `
+      <ellipse cx="200" cy="252" rx="60" ry="12" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <rect x="188" y="140" width="24" height="112" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <path d="M170 140 q30 -18 60 0" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <circle cx="200" cy="128" r="22" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <circle cx="200" cy="128" r="6" fill="var(--brass)"/>
+      <path d="M212 165 q60 10 55 70" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <ellipse cx="272" cy="238" rx="26" ry="14" fill="none" stroke="var(--line)" stroke-width="3" transform="rotate(20 272 238)"/>
+      <circle cx="180" cy="188" r="7" fill="var(--stamp)" stroke="var(--line)" stroke-width="1.5"/>
+    `
+  },
+  {
+    year: 1903, title:"Twelve Seconds Aloft", photo:"commons:Wright Brothers' 1903 Aeroplane Kitty Hawk in First Flight - NARA - 7580929.jpg",
+    blurb:"On a windswept dune in North Carolina, a fragile wood-and-canvas machine lifts off the ground under its own power for the first time.",
+    svg: `
+      <path d="M40 250 q80 -22 160 0 t160 0" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="120" y="150" width="170" height="14" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="140" y="180" width="130" height="14" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <line x1="140" y1="164" x2="140" y2="180" stroke="var(--line)" stroke-width="3"/>
+      <line x1="180" y1="164" x2="180" y2="180" stroke="var(--line)" stroke-width="3"/>
+      <line x1="230" y1="164" x2="230" y2="180" stroke="var(--line)" stroke-width="3"/>
+      <line x1="268" y1="164" x2="268" y2="180" stroke="var(--line)" stroke-width="3"/>
+      <rect x="165" y="164" width="70" height="24" fill="url(#hatch)" stroke="var(--line)" stroke-width="2.5"/>
+      <circle cx="165" cy="176" r="14" fill="none" stroke="var(--brass)" stroke-width="3"/>
+      <line x1="151" y1="176" x2="179" y2="176" stroke="var(--brass)" stroke-width="2"/>
+      <path d="M55 244 l14 -18 l6 4 l-10 14 z" fill="var(--line)"/>
+      <circle cx="70" cy="220" r="7" fill="var(--line)"/>
+    `
+  },
+  {
+    year: 1912, title:"Unsinkable, They Said", photo:"commons:RMS Titanic.jpg",
+    blurb:"The largest ocean liner ever built strikes an iceberg on its very first voyage across the North Atlantic and sinks before dawn.",
+    svg: `
+      <polygon points="300,150 340,190 300,190" fill="#fbf6e8" stroke="var(--line)" stroke-width="2.5"/>
+      <g transform="rotate(-6 190 190)">
+        <path d="M60 200 q130 -18 260 0 l-14 32 q-116 14 -232 0 z" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+        <rect x="110" y="150" width="16" height="45" fill="none" stroke="var(--line)" stroke-width="3"/>
+        <rect x="150" y="150" width="16" height="45" fill="none" stroke="var(--line)" stroke-width="3"/>
+        <rect x="190" y="150" width="16" height="45" fill="none" stroke="var(--line)" stroke-width="3"/>
+        <rect x="230" y="150" width="16" height="45" fill="none" stroke="var(--line)" stroke-width="3"/>
+      </g>
+      <path d="M40 235 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <path d="M40 250 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0" fill="none" stroke="var(--line)" stroke-width="2"/>
+    `
+  },
+  {
+    year: 1928, title:"An Accident in the Lab", photo:"commons:Sample of penicillin mould presented by Alexander Fleming to Douglas Macleod, 1935 (9672239344).jpg",
+    blurb:"Returning from holiday, a bacteriologist notices mould has killed off the bacteria in a forgotten petri dish — the first antibiotic follows.",
+    svg: `
+      <circle cx="220" cy="150" r="90" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <circle cx="220" cy="150" r="76" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 4"/>
+      <path d="M170 120 q10 -18 30 -8 q16 -14 30 4 q18 -6 24 14 q14 6 4 26 q6 18 -16 20 q-8 16 -28 6 q-16 12 -30 -4 q-20 2 -22 -20 q-14 -8 -2 -26 z" fill="var(--stamp)" opacity=".55"/>
+      <line x1="330" y1="230" x2="360" y2="260" stroke="var(--line)" stroke-width="3"/>
+      <rect x="340" y="190" width="16" height="50" rx="4" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <circle cx="348" cy="182" r="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <rect x="330" y="248" width="36" height="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+    `
+  },
+  {
+    year: 1931, title:"Reaching for the Sky", photo:"commons:Empire-State-Building.JPG",
+    blurb:"In just over a year of construction, a new tower rises above Manhattan to become — for decades — the tallest building on Earth.",
+    svg: `
+      <rect x="60" y="220" width="40" height="40" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <rect x="300" y="200" width="46" height="60" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <rect x="150" y="150" width="100" height="110" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <rect x="168" y="105" width="64" height="48" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <rect x="182" y="70" width="36" height="38" fill="url(#hatch)" stroke="var(--line)" stroke-width="3"/>
+      <line x1="200" y1="70" x2="200" y2="30" stroke="var(--line)" stroke-width="4"/>
+      <circle cx="200" cy="26" r="5" fill="var(--brass)"/>
+      <circle cx="80" cy="50" r="18" fill="none" stroke="var(--brass)" stroke-width="2.5"/>
+      <line x1="60" y1="260" x2="346" y2="260" stroke="var(--line)" stroke-width="3"/>
+    `
+  },
+  {
+    year: 1936, title:"Pictures Through the Air", photo:"1936-bbc-television.jpg",
+    blurb:"A broadcaster in London begins the world's first regular high-definition television service, sending moving pictures into people's homes.",
+    svg: `
+      <rect x="120" y="120" width="160" height="120" rx="8" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="140" y="138" width="90" height="70" fill="url(#hatch)" stroke="var(--line)" stroke-width="2.5"/>
+      <circle cx="255" cy="155" r="9" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="255" cy="185" r="9" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <line x1="180" y1="120" x2="160" y2="80" stroke="var(--line)" stroke-width="2.5"/>
+      <line x1="220" y1="120" x2="240" y2="80" stroke="var(--line)" stroke-width="2.5"/>
+      <path d="M150 70 q50 -30 100 0" fill="none" stroke="var(--brass)" stroke-width="2.5"/>
+      <path d="M165 90 q35 -20 70 0" fill="none" stroke="var(--brass)" stroke-width="2"/>
+      <rect x="150" y="240" width="100" height="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+    `
+  },
+  {
+    year: 1969, title:"One Small Step", photo:"commons:Aldrin Apollo 11.jpg",
+    blurb:"Two astronauts step onto the surface of the Moon, watched live by hundreds of millions of people back on Earth.",
+    svg: `
+      <path d="M20 250 q180 -30 360 0" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <circle cx="90" cy="245" r="10" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="300" cy="240" r="16" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="330" cy="55" r="20" fill="none" stroke="var(--parchment-2)" stroke-width="2"/>
+      <path d="M320 48 q10 -6 18 0 q-4 12 -18 0" fill="var(--seal)" opacity=".5"/>
+      <circle cx="220" cy="185" r="20" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="207" y="205" width="26" height="34" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <line x1="207" y1="215" x2="185" y2="235" stroke="var(--line)" stroke-width="3"/>
+      <line x1="233" y1="215" x2="255" y2="230" stroke="var(--line)" stroke-width="3"/>
+      <line x1="215" y1="239" x2="205" y2="250" stroke="var(--line)" stroke-width="3"/>
+      <line x1="225" y1="239" x2="232" y2="250" stroke="var(--line)" stroke-width="3"/>
+      <line x1="150" y1="150" x2="150" y2="230" stroke="var(--line)" stroke-width="3"/>
+      <path d="M150 150 l38 0 l-8 16 l8 16 l-38 0 z" fill="var(--stamp)" stroke="var(--line)" stroke-width="2"/>
+      <path d="M70 230 l-14 18 l14 6 l14 -6 z" fill="none" stroke="var(--line)" stroke-width="2"/>
+      <path d="M70 236 l-30 24 l60 0 z" fill="none" stroke="var(--line)" stroke-width="2"/>
+    `
+  },
+  {
+    year: 1986, title:"The Reactor Fails", photo:"1986-chernobyl.jpg",
+    blurb:"A safety test at a nuclear power plant goes catastrophically wrong, releasing radioactive material across large parts of Europe.",
+    svg: `
+      <path d="M90 250 q-6 -90 40 -110 q46 20 40 110 z" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <path d="M220 250 q-6 -90 40 -110 q46 20 40 110 z" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <path d="M150 130 q30 -40 10 -80 q40 20 20 90 q-10 -6 -30 -10 z" fill="var(--stamp)" opacity=".5"/>
+      <g transform="translate(300,60) scale(0.5)">
+        <circle cx="0" cy="0" r="12" fill="var(--stamp)"/>
+        <path d="M0 -8 A 8 8 0 0 1 7 4 L 0 0 Z" fill="var(--stamp)" transform="rotate(0)"/>
+        <path d="M0 -8 A 8 8 0 0 1 7 4 L 0 0 Z" fill="var(--stamp)" transform="rotate(120)"/>
+        <path d="M0 -8 A 8 8 0 0 1 7 4 L 0 0 Z" fill="var(--stamp)" transform="rotate(240)"/>
+        <circle cx="0" cy="0" r="30" fill="none" stroke="var(--stamp)" stroke-width="3"/>
+      </g>
+      <line x1="30" y1="250" x2="370" y2="250" stroke="var(--line)" stroke-width="3"/>
+    `
+  },
+  {
+    year: 1989, title:"The Wall Comes Down", photo:"commons:West and East Germans at the Brandenburg Gate in 1989.jpg",
+    blurb:"After decades dividing a city, the concrete barrier separating East and West is breached — crowds cross freely for the first time in a generation.",
+    svg: `
+      <rect x="40" y="130" width="50" height="110" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="95" y="130" width="50" height="110" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="245" y="130" width="50" height="110" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="300" y="130" width="50" height="110" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <path d="M55 155 q10 10 0 20 q10 8 -2 18" fill="none" stroke="var(--brass)" stroke-width="2"/>
+      <path d="M315 165 l14 14 m0 -14 l-14 14" stroke="var(--brass)" stroke-width="2"/>
+      <g fill="var(--line)">
+        <circle cx="180" cy="195" r="7"/><line x1="180" y1="202" x2="180" y2="222" stroke="var(--line)" stroke-width="3"/>
+        <line x1="180" y1="206" x2="168" y2="196" stroke="var(--line)" stroke-width="3"/>
+        <line x1="180" y1="206" x2="192" y2="196" stroke="var(--line)" stroke-width="3"/>
+        <circle cx="210" cy="200" r="7"/><line x1="210" y1="207" x2="210" y2="224" stroke="var(--line)" stroke-width="3"/>
+        <line x1="210" y1="211" x2="199" y2="201" stroke="var(--line)" stroke-width="3"/>
+        <line x1="210" y1="211" x2="221" y2="201" stroke="var(--line)" stroke-width="3"/>
+      </g>
+      <line x1="30" y1="240" x2="360" y2="240" stroke="var(--line)" stroke-width="3"/>
+    `
+  },
+  {
+    year: 1991, title:"The Web Opens Up", photo:"1991-world-wide-web.jpg",
+    blurb:"A researcher's project for linking documents across computers is released freely to the world, laying the groundwork for the modern internet.",
+    svg: `
+      <circle cx="200" cy="130" r="70" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <ellipse cx="200" cy="130" rx="70" ry="26" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+      <ellipse cx="200" cy="130" rx="30" ry="70" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+      <line x1="130" y1="130" x2="270" y2="130" stroke="var(--line)" stroke-width="1.5"/>
+      <circle cx="150" cy="95" r="6" fill="var(--brass)"/>
+      <circle cx="250" cy="100" r="6" fill="var(--brass)"/>
+      <circle cx="240" cy="170" r="6" fill="var(--brass)"/>
+      <circle cx="160" cy="165" r="6" fill="var(--brass)"/>
+      <line x1="150" y1="95" x2="250" y2="100" stroke="var(--brass)" stroke-width="1.5"/>
+      <line x1="240" y1="170" x2="160" y2="165" stroke="var(--brass)" stroke-width="1.5"/>
+      <line x1="150" y1="95" x2="160" y2="165" stroke="var(--brass)" stroke-width="1.5"/>
+      <rect x="150" y="220" width="100" height="30" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="185" y="250" width="30" height="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <line x1="165" y1="235" x2="200" y2="235" stroke="var(--line)" stroke-width="2"/>
+      <line x1="165" y1="235" x2="165" y2="228" stroke="var(--line)" stroke-width="2"/>
+    `
+  },
+  {
+    year: 2007, title:"A Screen You Could Touch", photo:"2007-first-iphone.jpg",
+    blurb:"A new kind of mobile phone does away with the physical keypad entirely, controlled instead by a finger on a glass screen.",
+    svg: `
+      <rect x="140" y="50" width="120" height="210" rx="16" fill="none" stroke="var(--line)" stroke-width="3"/>
+      <rect x="152" y="72" width="96" height="150" fill="url(#hatch)" stroke="var(--line)" stroke-width="2"/>
+      <circle cx="200" cy="240" r="10" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+      <rect x="182" y="58" width="36" height="5" rx="2" fill="var(--line)"/>
+      <g stroke="var(--line)" stroke-width="1.5" fill="#fbf6e8">
+        <rect x="160" y="82" width="18" height="18" rx="4"/>
+        <rect x="186" y="82" width="18" height="18" rx="4"/>
+        <rect x="212" y="82" width="18" height="18" rx="4"/>
+        <rect x="160" y="108" width="18" height="18" rx="4"/>
+        <rect x="186" y="108" width="18" height="18" rx="4"/>
+        <rect x="212" y="108" width="18" height="18" rx="4"/>
+        <rect x="160" y="134" width="18" height="18" rx="4"/>
+        <rect x="186" y="134" width="18" height="18" rx="4"/>
+        <rect x="212" y="134" width="18" height="18" rx="4"/>
+      </g>
+      <circle cx="196" cy="185" r="14" fill="var(--brass)" opacity=".7"/>
+      <path d="M270 90 q14 6 4 18" fill="none" stroke="var(--brass)" stroke-width="2.5"/>
+      <path d="M280 78 q22 12 6 32" fill="none" stroke="var(--brass)" stroke-width="2"/>
+    `
+  }
+];
+
+const YEAR_MIN = 1400, YEAR_MAX = 2025;
+
+/* ============ STATE ============ */
+let order = [];
+let idx = 0;
+let totalScore = 0;
+let results = [];
+let currentGuess = Math.round((YEAR_MIN+YEAR_MAX)/2);
+let locked = false;
+
+const app = document.getElementById('app');
+
+function shuffledOrder(){
+  const arr = ROUNDS.map((_,i)=>i);
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function hatchDefs(){
+  return `<defs>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="var(--line)" stroke-width="1.4" opacity=".35"/>
+    </pattern>
+  </defs>`;
+}
+
+function scoreFor(distance){
+  return Math.max(0, Math.round(1000 * Math.exp(-distance/16)));
+}
+
+function photoInfo(r){
+  if(r.photo && r.photo.indexOf('commons:') === 0){
+    const name = r.photo.slice('commons:'.length);
+    return {
+      src: 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(name) + '?width=800',
+      pageUrl: 'https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(name),
+      attribution: 'Photo via Wikimedia Commons'
+    };
+  }
+  return {
+    src: 'images/' + r.photo,
+    pageUrl: null,
+    attribution: null
+  };
+}
+
+function verdictFor(distance){
+  if(distance === 0) return {label:"BULLSEYE", good:true};
+  if(distance <= 5) return {label:"DEAD ON", good:true};
+  if(distance <= 15) return {label:"CLOSE CALL", good:true};
+  if(distance <= 50) return {label:"SAME ERA", good:false};
+  return {label:"FAR OFF", good:false};
+}
+
+function rankFor(total){
+  const max = ROUNDS.length*1000;
+  const pct = total/max;
+  if(pct >= .85) return "Master Chronologist";
+  if(pct >= .65) return "Seasoned Historian";
+  if(pct >= .42) return "Apprentice Archivist";
+  if(pct >= .2) return "Novice Timekeeper";
+  return "Lost in Time";
+}
+
+/* ============ RENDER: START ============ */
+function renderStart(){
+  app.innerHTML = `
+    <div class="masthead">
+      <div class="eyebrow">EST. 1440 &mdash; 2007</div>
+      <h1>THE CHRONOSCOPE</h1>
+      <div class="eyebrow">A Field Guide to Guessing the Year</div>
+    </div>
+    <div class="rule"></div>
+    <div class="card"><div class="card-inner">
+      <h2 style="font-size:22px;">Fourteen Moments in Time</h2>
+      <p class="start-copy">Study each engraving, then slide the dial to the year you believe it happened. The closer your guess, the more points you'll earn. <b>${ROUNDS.length} rounds</b> in all, spanning six centuries.</p>
+      <div class="stat-row">
+        <div class="stat-chip"><span class="n">${ROUNDS.length}</span><span class="l">Rounds</span></div>
+        <div class="stat-chip"><span class="n">${YEAR_MIN}</span><span class="l">Earliest</span></div>
+        <div class="stat-chip"><span class="n">${YEAR_MAX}</span><span class="l">Latest</span></div>
+      </div>
+      <button class="btn-primary" id="startBtn">Begin the Investigation</button>
+    </div></div>
+  `;
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    order = shuffledOrder();
+    idx = 0; totalScore = 0; results = [];
+    renderRound();
+  });
+}
+
+/* ============ RENDER: ROUND ============ */
+function renderRound(){
+  locked = false;
+  const r = ROUNDS[order[idx]];
+  const pinfo = photoInfo(r);
+  currentGuess = Math.round((YEAR_MIN+YEAR_MAX)/2);
+  const fillPct = ((currentGuess-YEAR_MIN)/(YEAR_MAX-YEAR_MIN))*100;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="eyebrow">CASE ${idx+1} / ${ROUNDS.length}</span>
+      <span class="score-badge">${totalScore} PTS</span>
+    </div>
+    <div class="card"><div class="card-inner">
+      <div class="frame">
+        <img class="real-photo" src="${pinfo.src}" alt="${r.title}" loading="eager"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+          ${hatchDefs()}
+          ${r.svg}
+        </svg>
+      </div>
+      <div class="plate-caption">${pinfo.pageUrl ? `<a href="${pinfo.pageUrl}" target="_blank" rel="noopener" style="color:inherit;">${pinfo.attribution}</a>` : `Exhibit ${idx+1} &mdash; Untitled`}</div>
+
+      <p class="prompt">${r.title}<br><span style="font-weight:400;font-size:14px;color:#6b5f50;">In what year did this take place?</span></p>
+
+      <div class="year-readout"><span class="num" id="yearNum">${currentGuess}</span></div>
+      <input type="range" id="yearSlider" min="${YEAR_MIN}" max="${YEAR_MAX}" step="1" value="${currentGuess}" style="--fill:${fillPct}%">
+      <div class="tick-row"><span>${YEAR_MIN}</span><span>${Math.round((YEAR_MIN+YEAR_MAX)/2)}</span><span>${YEAR_MAX}</span></div>
+
+      <button class="btn-primary" id="lockBtn" style="margin-top:20px;">Lock In Guess</button>
+    </div></div>
+  `;
+
+  const slider = document.getElementById('yearSlider');
+  const numEl = document.getElementById('yearNum');
+  slider.addEventListener('input', (e)=>{
+    currentGuess = parseInt(e.target.value,10);
+    numEl.textContent = currentGuess;
+    const pct = ((currentGuess-YEAR_MIN)/(YEAR_MAX-YEAR_MIN))*100;
+    slider.style.setProperty('--fill', pct+'%');
+  });
+  document.getElementById('lockBtn').addEventListener('click', ()=>{
+    if(locked) return;
+    locked = true;
+    renderReveal(r);
+  });
+}
+
+/* ============ RENDER: REVEAL ============ */
+function renderReveal(r){
+  const pinfo = photoInfo(r);
+  const distance = Math.abs(currentGuess - r.year);
+  const pts = scoreFor(distance);
+  const verdict = verdictFor(distance);
+  totalScore += pts;
+  results.push({title:r.title, year:r.year, guess:currentGuess, pts});
+
+  const guessPct = ((currentGuess-YEAR_MIN)/(YEAR_MAX-YEAR_MIN))*100;
+  const actualPct = ((r.year-YEAR_MIN)/(YEAR_MAX-YEAR_MIN))*100;
+  const isLast = idx === ROUNDS.length-1;
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span class="eyebrow">CASE ${idx+1} / ${ROUNDS.length}</span>
+      <span class="score-badge">${totalScore} PTS</span>
+    </div>
+    <div class="card"><div class="card-inner">
+      <div class="stamp-wrap">
+        <div class="frame">
+          <img class="real-photo" src="${pinfo.src}" alt="${r.title}" loading="eager"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+            ${hatchDefs()}
+            ${r.svg}
+          </svg>
+        </div>
+        <div class="stamp ${verdict.good?'good':''}">${verdict.label}</div>
+      </div>
+
+      <div class="result-row">
+        <span>YOUR GUESS<br><b>${currentGuess}</b></span>
+        <span style="text-align:center;">OFF BY<br><b>${distance} yr${distance===1?'':'s'}</b></span>
+        <span style="text-align:right;">ACTUAL<br><b>${r.year}</b></span>
+      </div>
+
+      <div class="timeline">
+        <div class="dot guess" style="left:${guessPct}%;"></div>
+        <div class="dot actual" style="left:${actualPct}%;"></div>
+      </div>
+
+      <p class="blurb">${r.blurb}</p>
+      <p style="font-family:'Space Mono',monospace; font-size:13px; color:var(--seal); margin-top:12px;">+ ${pts} points</p>
+
+      <button class="btn-primary" id="nextBtn" style="margin-top:8px;">${isLast? 'See Final Results' : 'Next Case'}</button>
+    </div></div>
+  `;
+
+  document.getElementById('nextBtn').addEventListener('click', ()=>{
+    if(isLast){
+      renderResults();
+    } else {
+      idx++;
+      renderRound();
+    }
+  });
+}
+
+/* ============ RENDER: RESULTS ============ */
+function renderResults(){
+  const rank = rankFor(totalScore);
+  const max = ROUNDS.length*1000;
+  const avgErr = Math.round(results.reduce((s,r)=>s+Math.abs(r.guess-r.year),0)/results.length);
+
+  app.innerHTML = `
+    <div class="masthead">
+      <div class="eyebrow">CASE FILE CLOSED</div>
+      <h1 style="font-size:clamp(24px,7vw,32px);">FINAL REPORT</h1>
+    </div>
+    <div class="card"><div class="card-inner">
+      <div class="rank">
+        <div class="eyebrow">YOUR TITLE</div>
+        <div class="n">${rank}</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-chip"><span class="n">${totalScore}</span><span class="l">of ${max}</span></div>
+        <div class="stat-chip"><span class="n">${avgErr}</span><span class="l">Avg. Yrs Off</span></div>
+      </div>
+      <div class="review-list">
+        ${results.map(r=>`
+          <div class="review-item">
+            <span>${r.title}</span>
+            <span class="ry">${r.guess} &rarr; ${r.year}</span>
+            <span class="pts">+${r.pts}</span>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn-primary" id="againBtn">Investigate Again</button>
+      <button class="btn-ghost" id="shareBtn">Copy Results</button>
+    </div></div>
+    <p class="footnote">Add this page to your Home Screen for a full-screen, app-like experience on iOS or Android.</p>
+  `;
+
+  document.getElementById('againBtn').addEventListener('click', renderStart);
+  document.getElementById('shareBtn').addEventListener('click', ()=>{
+    const text = `The Chronoscope — ${rank}\n${totalScore}/${max} pts, avg ${avgErr} yrs off\n` +
+      results.map(r=>`${r.title}: guessed ${r.guess}, actual ${r.year} (+${r.pts})`).join('\n');
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(()=>{
+        const btn = document.getElementById('shareBtn');
+        btn.textContent = 'Copied!';
+        setTimeout(()=>btn.textContent='Copy Results', 1400);
+      });
+    }
+  });
+}
+
+renderStart();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {
+      // Fails silently if the file isn't hosted (e.g. opened straight from disk) —
+      // the game still works fully without offline caching.
+    });
+  });
+}
+</script>
+</body>
+</html>
